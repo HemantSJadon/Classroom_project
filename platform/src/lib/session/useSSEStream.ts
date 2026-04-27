@@ -26,13 +26,19 @@ export function useSSEStream() {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let lastEvent = '';
+    let lineBuffer = ''; // buffers incomplete lines across network chunks
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
 
-      for (const line of chunk.split('\n')) {
+      // Prepend any buffered incomplete line from the previous chunk
+      const text = lineBuffer + decoder.decode(value, { stream: true });
+      const lines = text.split('\n');
+      // The last element may be an incomplete line — buffer it for next chunk
+      lineBuffer = lines.pop() ?? '';
+
+      for (const line of lines) {
         if (line.startsWith('event: ')) {
           lastEvent = line.slice(7).trim();
         } else if (line.startsWith('data: ')) {
@@ -50,6 +56,7 @@ export function useSSEStream() {
             lastEvent = '';
           } catch {}
         }
+        // Ignore comment lines (keepalive: ": keepalive")
       }
     }
   }, []);

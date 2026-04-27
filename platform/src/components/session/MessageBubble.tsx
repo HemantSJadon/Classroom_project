@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import DepthControls from './DepthControls';
 import ConceptCard from './ConceptCard';
+import MarkdownText from '@/components/ui/MarkdownText';
 
 const MindMapRenderer = dynamic(() => import('./MindMapRenderer'), { ssr: false });
 
@@ -29,9 +30,10 @@ interface Props {
 }
 
 function RichContent({ message }: { message: ChatMessage }) {
-  if (message.streaming || !message.content) {
+  // Show dots only while streaming with no content yet
+  if (!message.content && message.streaming) {
     return (
-      <span className="inline-flex gap-1">
+      <span className="inline-flex gap-1 py-1">
         {[0, 150, 300].map((d) => (
           <span key={d} className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />
         ))}
@@ -50,7 +52,14 @@ function RichContent({ message }: { message: ChatMessage }) {
       return <ConceptCard data={data} />;
     } catch { return <span className="text-gray-400 text-xs">Invalid card data</span>; }
   }
-  return <>{message.content}</>;
+  // Render streaming content live; add cursor while streaming
+  if (message.author_type === 'user') return <>{message.content}</>;
+  return (
+    <>
+      <MarkdownText content={message.content} />
+      {message.streaming && <span className="inline-block w-2 h-3.5 ml-0.5 bg-gray-300 animate-pulse align-middle" />}
+    </>
+  );
 }
 
 export default function MessageBubble({ message, sessionId: _sessionId, onReexplain, isReexplaining }: Props) {
