@@ -18,9 +18,12 @@ create policy "user_preferences: own row"
   on user_preferences for all using (auth.uid() = user_id);
 
 create or replace function update_preferences_updated_at()
-returns trigger language plpgsql as $$
-begin new.updated_at = now(); return new; end;
-$$;
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
 
 create trigger preferences_updated_at
   before update on user_preferences
