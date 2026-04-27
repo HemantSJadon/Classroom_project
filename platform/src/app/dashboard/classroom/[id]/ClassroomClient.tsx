@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import SessionSetup from '@/components/session/SessionSetup';
 import SessionView from '@/components/session/SessionView';
+import type { ChatMessage } from '@/components/session/MessageBubble';
 
 interface Classroom {
   id: string;
@@ -35,7 +36,7 @@ interface ActiveSession {
 export default function ClassroomClient({ classroom, previousSession }: Props) {
   const [view, setView] = useState<View>('setup');
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
-  const [messages, setMessages] = useState<never[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const handleStart = useCallback(async (durationMinutes: number | null) => {

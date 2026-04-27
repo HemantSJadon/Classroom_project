@@ -1,0 +1,60 @@
+import { useCallback, useRef } from 'react';
+
+type EventHandlers = {
+  onToken?: (token: string, raw: Record<string, string>) => void;
+  onEvent?: (event: string, data: Record<string, string>) => void;
+  onDone?: (data: Record<string, string>) => void;
+  onError?: (data: Record<string, string>) => void;
+};
+
+export function useSSEStream() {
+  const abortRef = useRef<AbortController | null>(null);
+
+  const stream = useCallback(async (url: string, body: unknown, handlers: EventHandlers) => {
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: abortRef.current.signal,
+    });
+
+    if (!res.ok || !res.body) throw new Error(`Request failed: ${res.status}`);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let lastEvent = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+
+      for (const line of chunk.split('\n')) {
+        if (line.startsWith('event: ')) {
+          lastEvent = line.slice(7).trim();
+        } else if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (lastEvent === 'token') {
+              handlers.onToken?.(data.token ?? '', data);
+            } else if (lastEvent === 'done') {
+              handlers.onDone?.(data);
+            } else if (lastEvent === 'error') {
+              handlers.onError?.(data);
+            } else if (lastEvent) {
+              handlers.onEvent?.(lastEvent, data);
+            }
+            lastEvent = '';
+          } catch {}
+        }
+      }
+    }
+  }, []);
+
+  const abort = useCallback(() => abortRef.current?.abort(), []);
+
+  return { stream, abort };
+}
