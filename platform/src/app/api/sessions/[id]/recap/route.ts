@@ -1,5 +1,6 @@
 import { createServerClient } from '@/lib/supabase/server';
 import { getLLMProvider } from '@/lib/llm';
+import { checkRateLimit, rateLimitResponse } from '@/lib/ratelimit';
 
 type Params = { params: Promise<{ id: string }> };
 const KEEPALIVE_MS = 15_000;
@@ -11,6 +12,9 @@ export async function POST(_req: Request, { params }: Params) {
   if (authError || !user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   }
+
+  const rl = await checkRateLimit(user.id, 'recap');
+  if (!rl.allowed) return rateLimitResponse(rl.reset);
 
   // Fetch the session and verify ownership
   const { data: session } = await supabase

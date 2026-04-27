@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLLMProvider } from '@/lib/llm';
 import { MINDMAP_INSTRUCTIONS, type MindMapData } from '@/lib/mindmap/types';
+import { checkRateLimit } from '@/lib/ratelimit';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -10,6 +11,9 @@ export async function POST(_req: Request, { params }: Params) {
   const supabase = await createServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const rl = await checkRateLimit(user.id, 'mindmap');
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
   type SessionRow = { classroom_id: string; classrooms: { title: string } };
   const { data: raw } = await supabase

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLLMProvider } from '@/lib/llm';
+import { checkRateLimit } from '@/lib/ratelimit';
 
 type CardType = 'concept' | 'summary' | 'insight';
 type Params = { params: Promise<{ id: string }> };
@@ -19,6 +20,9 @@ export async function POST(request: Request, { params }: Params) {
   const supabase = await createServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const rl = await checkRateLimit(user.id, 'card');
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
   const { card_type = 'concept' }: { card_type: CardType } = await request.json();
 

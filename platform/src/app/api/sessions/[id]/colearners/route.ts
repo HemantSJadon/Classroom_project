@@ -2,6 +2,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { getLLMProvider } from '@/lib/llm';
 import { DEFAULT_PERSONAS } from '@/lib/personas/definitions';
 import { buildCoLearnerPrompt, pickCoLearnersForTurn } from '@/lib/prompts/colearner';
+import { checkRateLimit, rateLimitResponse } from '@/lib/ratelimit';
 
 type Params = { params: Promise<{ id: string }> };
 const KEEPALIVE_MS = 15_000;
@@ -11,6 +12,9 @@ export async function POST(request: Request, { params }: Params) {
   const supabase = await createServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return new Response('Unauthorized', { status: 401 });
+
+  const rl = await checkRateLimit(user.id, 'colearners');
+  if (!rl.allowed) return rateLimitResponse(rl.reset);
 
   const { instructor_message_id, turn_index } = await request.json();
 

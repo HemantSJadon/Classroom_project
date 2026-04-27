@@ -3,6 +3,7 @@ import { getLLMProvider } from '@/lib/llm';
 import { buildContextMessages } from '@/lib/context/manager';
 import { buildInstructorSystemPrompt } from '@/lib/prompts/instructor';
 import { DEFAULT_PERSONAS, personasToSystemPrompt } from '@/lib/personas/definitions';
+import { checkRateLimit, rateLimitResponse } from '@/lib/ratelimit';
 
 type Params = { params: Promise<{ id: string }> };
 const KEEPALIVE_MS = 15_000;
@@ -12,6 +13,9 @@ export async function POST(request: Request, { params }: Params) {
   const supabase = await createServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return new Response('Unauthorized', { status: 401 });
+
+  const rl = await checkRateLimit(user.id, 'chat');
+  if (!rl.allowed) return rateLimitResponse(rl.reset);
 
   const { content } = await request.json();
   if (!content?.trim()) return new Response('content required', { status: 400 });

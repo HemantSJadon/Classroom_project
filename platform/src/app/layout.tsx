@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import OfflineBanner from '@/components/ui/OfflineBanner';
 import './globals.css';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
@@ -13,7 +14,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="h-full bg-gray-950 text-gray-100">{children}</body>
+      <body className="h-full bg-gray-950 text-gray-100">
+        <OfflineBanner />
+        {children}
+      </body>
     </html>
   );
 }

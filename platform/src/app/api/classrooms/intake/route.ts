@@ -1,6 +1,7 @@
 import { createServerClient } from '@/lib/supabase/server';
 import { getLLMProvider } from '@/lib/llm';
 import type { LLMMessage } from '@/lib/llm/provider';
+import { checkRateLimit, rateLimitResponse } from '@/lib/ratelimit';
 
 const KEEPALIVE_INTERVAL_MS = 15_000;
 
@@ -40,6 +41,9 @@ export async function POST(request: Request) {
       headers: { 'Content-Type': 'application/json' },
     });
   }
+
+  const rl = await checkRateLimit(user.id, 'intake');
+  if (!rl.allowed) return rateLimitResponse(rl.reset);
 
   const { messages }: { messages: LLMMessage[] } = await request.json();
 

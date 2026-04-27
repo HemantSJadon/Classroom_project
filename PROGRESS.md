@@ -74,10 +74,45 @@ All Phase 4 deliverables done:
 
 ---
 
-## Up Next — Phase 5: Polish + Deployment
-- [ ] Full UI/UX design system pass — spacing, typography, motion, dark mode consistency
-- [ ] Performance audit — streaming latency, DB query optimisation, bundle size
-- [ ] Vercel + Supabase deployment config (env vars, edge runtime where applicable)
-- [ ] API rate limiting on all LLM routes
-- [ ] Error boundaries, loading states, offline handling, fallback UI
-- [ ] Final README.md with setup, env vars, provider switching instructions
+## Phase 5 — Polish + Deployment ✅ — 2026-04-27
+
+**Design system:**
+- `globals.css` rewritten with CSS custom properties for all design tokens (--background, --surface-1/2, --border, --accent, --accent-hover, --text-*)
+- Animation keyframes: fade-in, slide-up, pulse-soft, spin-smooth + `.animate-*` utility classes
+- `.streaming-cursor::after` blinking block cursor for live SSE output
+- Thin scrollbar styling, global focus ring, `::selection` accent colour
+
+**Components:**
+- `Spinner` — size variants sm/md/lg; `animate-spin-smooth`
+- `ErrorBoundary` — React class component with reset; wraps `SessionView` in `ClassroomClient`
+- `OfflineBanner` — detects `navigator.onLine` + `online`/`offline` events; yellow top bar; wired into root `layout.tsx`
+
+**Loading & error pages:**
+- `app/error.tsx`, `app/not-found.tsx` — root-level Next.js error boundaries with reset / home navigation
+- `app/dashboard/error.tsx` — dashboard-scoped error boundary
+- `app/dashboard/loading.tsx`, `app/dashboard/classroom/[id]/loading.tsx` — skeleton spinners via Next.js `loading.tsx` convention
+
+**Rate limiting (all LLM routes):**
+- `src/lib/ratelimit.ts` — Upstash Redis sliding-window (sorted set, score=timestamp); graceful fallback (allow all) when Redis unconfigured
+- Applied to: intake (20), chat (30), colearners (40), reexplain (20), mindmap (10), card (15), recap (10), summarise (10)
+
+**next.config.ts optimisations:**
+- `reactStrictMode: true`, `compress: true`
+- Security headers on all routes: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
+- Long-lived cache header for `/_next/static/*`
+- Image optimisation: avif + webp formats, standard device sizes
+
+**README.md** — Full setup guide: local dev, Supabase migrations, env vars, LLM provider switching table, rate limit table, project structure, Vercel deployment checklist.
+
+**Build status:** `next build` passes, 22 routes, zero TypeScript errors.
+
+---
+
+## Phase 5 Complete ✅ — Platform Complete
+
+All 5 phases delivered:
+- [x] Phase 1 — Foundation (scaffold, auth, classroom CRUD, intake)
+- [x] Phase 2 — Session Engine (timer, inactivity, state persistence, recap)
+- [x] Phase 3 — AI Classroom Core (instructor, co-learners, re-explain, context manager)
+- [x] Phase 4 — Rich Features (mind maps, concept cards, history browser, preferences)
+- [x] Phase 5 — Polish + Deployment (design system, error boundaries, rate limiting, next.config, README)

@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import SessionSetup from '@/components/session/SessionSetup';
 import SessionView from '@/components/session/SessionView';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import type { ChatMessage } from '@/components/session/MessageBubble';
 
 interface Classroom {
@@ -91,13 +92,15 @@ export default function ClassroomClient({ classroom, previousSession }: Props) {
   if (view === 'session' && activeSession) {
     return (
       <div className="h-full flex flex-col">
-        <SessionView
-          session={activeSession}
-          initialMessages={messages}
-          classroomId={classroom.id}
-          classroomTitle={classroom.title}
-          onEnd={handleEnd}
-        />
+        <ErrorBoundary>
+          <SessionView
+            session={activeSession}
+            initialMessages={messages}
+            classroomId={classroom.id}
+            classroomTitle={classroom.title}
+            onEnd={handleEnd}
+          />
+        </ErrorBoundary>
       </div>
     );
   }
