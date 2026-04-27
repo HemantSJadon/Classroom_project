@@ -47,10 +47,10 @@ export default function DashboardClient({ initialClassrooms }: Props) {
 
   return (
     <>
-      <div className="p-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold">Classrooms</h1>
+      <div className="p-4 sm:p-8 space-y-6">
+        <div className="flex flex-wrap items-center gap-3 justify-between">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold">Classrooms</h1>
             <div className="flex rounded-lg border border-gray-700 overflow-hidden text-sm">
               {(['active', 'archived'] as const).map((f) => (
                 <button
@@ -69,7 +69,7 @@ export default function DashboardClient({ initialClassrooms }: Props) {
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors whitespace-nowrap"
           >
             + New Classroom
           </button>
