@@ -129,6 +129,33 @@ export interface Database {
         };
         Relationships: [];
       };
+      user_preferences: {
+        Row: {
+          id: string;
+          user_id: string;
+          preferred_depth: string;
+          colearner_intensity: string;
+          language_style: string;
+          learning_pace: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          preferred_depth?: string;
+          colearner_intensity?: string;
+          language_style?: string;
+          learning_pace?: string;
+          updated_at?: string;
+        };
+        Update: {
+          preferred_depth?: string;
+          colearner_intensity?: string;
+          language_style?: string;
+          learning_pace?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

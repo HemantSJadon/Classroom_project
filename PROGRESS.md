@@ -1,78 +1,83 @@
 # AI Learning Platform — Build Progress
 
 ## Phase 1 — Foundation ✅ — 2026-04-27
-
 - Next.js 16 scaffold, TypeScript, Tailwind, App Router
 - Supabase auth (login/signup/logout), middleware route protection
 - Classroom CRUD (create, list, archive, soft-delete)
 - Interactive topic intake — multi-turn AI conversation via SSE
 - Dashboard: server-fetched classroom list, filter tabs, ClassroomCard with menu
 - LLM provider abstraction: Anthropic, OpenAI, DeepSeek, Groq — swap via env var
-- DB schema + RLS migrations
-- Build: 9 routes, zero TypeScript errors
-
----
+- DB schema + RLS migrations | Build: 9 routes, zero TypeScript errors
 
 ## Phase 2 — Session Engine ✅ — 2026-04-27
-
 - Session start/stop/resume API (race-condition guarded)
-- Duration timer with circular SVG countdown, red warning at <5 min, auto-stop
+- Duration timer with circular SVG countdown, red at <5 min, auto-stop
 - Inactivity detection (90s idle + Page Visibility API) → pause overlay
 - State persistence: scroll + last message snapshotted to DB every 30s
 - Pre-session recap generation (SSE streamed from session transcript)
 - Full session lifecycle: setup → recap gate → duration → active → ended
 - Build: 13 routes, zero TypeScript errors
 
----
-
 ## Phase 3 — AI Classroom Core ✅ — 2026-04-27
-
-**Prompt Library:**
-- `src/lib/prompts/instructor.ts` — instructor system prompt builder; per-depth re-explain instructions (ELI5 → Expert)
-- `src/lib/prompts/colearner.ts` — per-persona co-learner prompt builder; rotation logic (1–2 personas per turn, cycling)
-
-**AI API Endpoints (all SSE streamed, 15s keepalive, 45s timeout):**
-- `POST /api/sessions/[id]/chat` — user sends message → saves to DB → builds context via manager → streams instructor response → saves instructor message → emits `done` with message ID + total count
-- `POST /api/sessions/[id]/colearners` — takes instructor_message_id + turn_index → picks 1–2 personas → streams each question sequentially → saves each to DB as `colearner`/`question`
-- `POST /api/sessions/[id]/reexplain` — takes message_id + depth level → streams re-explanation at chosen depth → saves as child message (parent_message_id = original) with `{reexplain: true}` metadata
-- `POST /api/sessions/[id]/summarise` — fetches last 20 messages → LLM generates dense summary → saves to session_state.context_summary (injected into future context calls)
-
-**Context Manager (wired live):**
-- Every chat call: fetches latest session_state.context_summary → injects via `buildContextMessages`
-- After every 20th message: `shouldSummarise()` triggers background summarise call
-- Hard 6k token cap enforced in `buildContextMessages`
-- Persona definitions always in system prompt (persona anchoring — never pruned)
-
-**UI Components:**
-- `MessageBubble` — renders user/instructor/co-learner messages with distinct styles; persona colour-coded avatars; "Re-explain ↓" button appears on hover for instructor messages; re-explain badge; streaming dot animation
-- `DepthControls` — dropdown: ELI5 / Simple / Intermediate / Advanced / Expert
-- `useSSEStream` hook — shared SSE reader: parses event/data pairs, routes to onToken/onEvent/onDone/onError handlers; abort controller for cleanup
-
-**SessionView (fully AI-powered):**
-- User types → sends to `/chat` → instructor streams in → co-learner questions stream in sequentially
-- Hover any instructor message → Re-explain menu appears → pick depth → re-explanation streams inline
-- Rolling summary triggered automatically in background at 20-message intervals
-- Turn index tracked to rotate co-learner personas across exchanges
-- Optimistic UI: user message appears instantly; streaming placeholders with animated dots
-
-**Build status:** `next build` passes, 17 routes, middleware active, zero TypeScript errors.
+- Instructor + co-learner prompt library (5 depth levels, persona rotation)
+- /api/sessions/[id]/chat: user → DB save → context build → instructor stream
+- /api/sessions/[id]/colearners: picks 1-2 personas/turn, streams questions sequentially
+- /api/sessions/[id]/reexplain: re-explain any message at 5 depth levels
+- /api/sessions/[id]/summarise: rolling 3-5 sentence summary → session_state
+- Context manager wired live (6k token cap, rolling summary, persona anchoring)
+- MessageBubble: persona avatars, streaming dots, Re-explain hover menu
+- useSSEStream hook: reusable SSE reader with event routing + abort control
+- Build: 17 routes, zero TypeScript errors
 
 ---
 
-## Phase 3 Complete ✅
+## Phase 4 — Rich Learning Features ✅ — 2026-04-27
 
-All Phase 3 deliverables done:
-- [x] Co-learner persona system (5 personas, consistent across sessions via `persona_definitions` field)
-- [x] Live Q&A thread — instructor answers + co-learner questions stream in after each exchange
-- [x] Re-explain at 5 depth levels (ELI5 → Simple → Intermediate → Advanced → Expert)
-- [x] Context window manager wired live (rolling summary, selective injection, 6k token cap)
-- [x] Multi-LLM provider abstraction fully active across all endpoints
+**Mind Map:**
+- `src/lib/mindmap/types.ts` — MindMapData types + JSON schema + LLM instructions
+- `POST /api/sessions/[id]/mindmap` — fetches recent messages → LLM generates JSON → saved as `content_type: mindmap` message
+- `MindMapRenderer` — pure SVG radial tree: root node at centre, N branches at equal angles, leaves at spread sub-angles; colour-coded by branch; no D3 dependency (custom geometry)
+
+**Concept Cards:**
+- `POST /api/sessions/[id]/card` — generates concept / summary / insight card JSON from recent discussion
+- `ConceptCard` — renders card with type-specific border colour, icon badge, body, and tag chips
+
+**Session Toolbar:**
+- `SessionToolbar` — "Generate: ⬡ Mind Map | ▣ Card ↓" bar above input; card type dropdown (concept/summary/insight); disabled while generating
+- `MessageBubble` updated: detects `content_type === 'mindmap'` or `'card'` → renders `MindMapRenderer` or `ConceptCard` inline; dynamic import (no SSR) for MindMapRenderer
+
+**Classroom History Browser:**
+- `GET /api/classrooms/[id]/sessions` — lists all sessions with message counts
+- `/dashboard/classroom/[id]/history` — server-rendered history page
+- `HistoryView` (client) — search by date; accordion per session (click to expand); lazy-fetches messages on open; shows text messages inline (line-clamped); shows duration, message count, status badge
+
+**User Preferences:**
+- `supabase/migrations/002_user_preferences.sql` — `user_preferences` table with RLS (preferred_depth, colearner_intensity, language_style, learning_pace); unique constraint per user; updated_at trigger
+- `GET/POST /api/user/preferences` — fetch preferences (with defaults); upsert via onConflict
+- `PreferencesPanel` — modal: fetches prefs, renders 4 setting groups as pill toggles, saves and shows ✓ confirmation
+- `Sidebar` updated: "Preferences" button opens panel; sign-out preserved
+
+**Database types** updated with `user_preferences` table.
+
+**Build status:** `next build` passes, 22 routes, middleware active, zero TypeScript errors.
 
 ---
 
-## Up Next — Phase 4: Rich Learning Features
-- [ ] Mind map generation and SVG rendering
-- [ ] Structured response cards (concept / summary / insight)
-- [ ] Classroom history browser (all sessions, searchable)
-- [ ] Session recap visual design
-- [ ] User config knobs: pace, depth, language style, co-learner intensity
+## Phase 4 Complete ✅
+
+All Phase 4 deliverables done:
+- [x] Mind map generation and SVG rendering (radial tree, colour-coded branches/leaves)
+- [x] Structured response cards (concept / summary / insight with type-specific styling)
+- [x] Session toolbar wiring mindmap + card generation inline in session view
+- [x] Classroom history browser (all sessions, expandable, lazy message loading, search)
+- [x] User preferences (4 knobs: depth, co-learner intensity, language style, pace)
+
+---
+
+## Up Next — Phase 5: Polish + Deployment
+- [ ] Full UI/UX design system pass — spacing, typography, motion, dark mode consistency
+- [ ] Performance audit — streaming latency, DB query optimisation, bundle size
+- [ ] Vercel + Supabase deployment config (env vars, edge runtime where applicable)
+- [ ] API rate limiting on all LLM routes
+- [ ] Error boundaries, loading states, offline handling, fallback UI
+- [ ] Final README.md with setup, env vars, provider switching instructions

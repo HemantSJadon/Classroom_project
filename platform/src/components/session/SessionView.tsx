@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import SessionTimer from './SessionTimer';
 import InactivityBanner from './InactivityBanner';
 import MessageBubble, { type ChatMessage } from './MessageBubble';
+import SessionToolbar from './SessionToolbar';
 import { useSSEStream } from '@/lib/session/useSSEStream';
 import { saveLocalSessionDraft } from '@/lib/session/state';
 import { shouldSummarise } from '@/lib/context/manager';
@@ -27,6 +29,7 @@ export default function SessionView({ session, initialMessages, classroomId, cla
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isReexplaining, setIsReexplaining] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [ending, setEnding] = useState(false);
   const turnIndexRef = useRef(0);
@@ -129,16 +132,34 @@ export default function SessionView({ session, initialMessages, classroomId, cla
     setIsReexplaining(true);
     const rId = `reexplain_${Date.now()}`;
     addMessage({ id: rId, author: 'Instructor', author_type: 'instructor', content: '', content_type: 'text', streaming: true, metadata: { depth, reexplain: true } });
-
     try {
       await streamReexplain(`/api/sessions/${session.id}/reexplain`, { message_id: messageId, depth }, {
         onToken: (token) => updateStreaming(rId, token),
         onDone: (data) => setMessages((prev) => prev.map((m) =>
           m.id === rId ? { ...m, id: data.message_id || m.id, streaming: false } : m)),
       });
-    } finally {
-      setIsReexplaining(false);
-    }
+    } finally { setIsReexplaining(false); }
+  }
+
+  async function handleMindMap() {
+    setIsGenerating(true);
+    try {
+      const res = await fetch(`/api/sessions/${session.id}/mindmap`, { method: 'POST' });
+      const data = await res.json();
+      if (data.message) addMessage({ ...data.message, author_type: 'instructor' });
+    } finally { setIsGenerating(false); }
+  }
+
+  async function handleCard(card_type: 'concept' | 'summary' | 'insight') {
+    setIsGenerating(true);
+    try {
+      const res = await fetch(`/api/sessions/${session.id}/card`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ card_type }),
+      });
+      const data = await res.json();
+      if (data.message) addMessage({ ...data.message, author_type: 'instructor' });
+    } finally { setIsGenerating(false); }
   }
 
   const handlePause = useCallback(async () => {
@@ -165,6 +186,10 @@ export default function SessionView({ session, initialMessages, classroomId, cla
         <div className="flex items-center gap-3">
           <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
           <span className="text-sm font-medium text-gray-200 truncate max-w-xs">{classroomTitle}</span>
+          <Link href={`/dashboard/classroom/${classroomId}/history`}
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors ml-1">
+            History
+          </Link>
         </div>
         <div className="flex items-center gap-4">
           {session.planned_duration_minutes && (
@@ -190,6 +215,12 @@ export default function SessionView({ session, initialMessages, classroomId, cla
         ))}
         <div ref={bottomRef} />
       </div>
+
+      <SessionToolbar
+        onMindMap={handleMindMap}
+        onCard={handleCard}
+        disabled={isSending || isGenerating}
+      />
 
       <div className="p-4 border-t border-gray-800 flex gap-3 flex-shrink-0">
         <textarea value={input} onChange={(e) => setInput(e.target.value)}
