@@ -3,56 +3,68 @@
 ## Phase 1 — Foundation
 
 ### Step 1: Next.js Scaffold ✅ — 2026-04-27
-**Status:** Complete. Build passes. Zero TypeScript errors.
 
-**What was done:**
-- Scaffolded Next.js 16 (App Router) with TypeScript, Tailwind, src dir layout in `platform/`
-- Installed all required dependencies:
-  - `@supabase/supabase-js`, `@supabase/auth-helpers-nextjs`
-  - `@anthropic-ai/sdk`, `openai` (also used as compatible SDK for DeepSeek/Groq)
-  - `@upstash/redis`, `zustand`, `zod`
-- Created `.env.local.example` with all required environment variables documented
-
-**LLM Provider Abstraction Layer (complete):**
-- `src/lib/llm/provider.ts` — `LLMProvider` interface with `stream()` and `complete()` methods
-- `src/lib/llm/anthropic.ts` — Anthropic adapter (claude-sonnet-4-20250514), 45s hard timeout
-- `src/lib/llm/openai.ts` — OpenAI adapter (gpt-4o), 45s hard timeout
-- `src/lib/llm/deepseek.ts` — DeepSeek adapter via OpenAI-compatible base URL, 45s hard timeout
-- `src/lib/llm/groq.ts` — Groq adapter (llama-3.3-70b-versatile), 45s hard timeout
-- `src/lib/llm/index.ts` — Factory: reads `LLM_PROVIDER` env var, zero code change to switch
-
-**Supabase Clients:**
-- `src/lib/supabase/client.ts` — Browser client (for client components)
-- `src/lib/supabase/server.ts` — Server client (for server components and API routes)
-
-**Database:**
-- `supabase/migrations/001_initial_schema.sql` — Full schema with RLS:
-  - `classrooms`, `sessions`, `messages`, `session_state` tables
-  - All indexes for common queries
-  - Row Level Security policies (users see only their own data)
-  - `updated_at` trigger on classrooms
-
-**Core Library Files:**
-- `src/lib/context/manager.ts` — Context window manager (6k token cap, last-10-messages injection, rolling summary support)
-- `src/lib/session/inactivity.ts` — Inactivity detection (90s idle + Page Visibility API)
-- `src/lib/session/state.ts` — Session state helpers (sessionStorage draft persistence)
-- `src/lib/personas/definitions.ts` — 5 co-learner personas with system prompt fragments
-- `src/types/database.ts` — Full TypeScript types for all DB tables
-
-**UI Shell:**
-- `/` — Landing page with sign in / create account links
-- `/login` — Login form (shell, not yet wired to Supabase)
-- `/signup` — Signup form (shell, not yet wired to Supabase)
-- `/dashboard` — Classroom grid with placeholder card + new classroom CTA
-- Dashboard layout with `Sidebar` component
-
-**Build status:** `next build` passes, 5 routes, zero warnings.
+- Scaffolded Next.js 16 (App Router), TypeScript, Tailwind, src dir layout in `platform/`
+- All dependencies installed: Supabase, LLM SDKs, Redis, Zustand, Zod
+- LLM provider abstraction layer: Anthropic, OpenAI, DeepSeek, Groq — swap via `LLM_PROVIDER` env var
+- Supabase browser + server clients (migrated from deprecated `auth-helpers-nextjs` to `@supabase/ssr`)
+- DB schema migration with RLS (`supabase/migrations/001_initial_schema.sql`)
+- Core libs: context manager, inactivity detection, session state, 5 persona definitions
+- UI shell: landing, login, signup, dashboard with sidebar
+- Build: 5 routes, zero TypeScript errors
 
 ---
 
-## Up Next — Phase 1 Remaining Steps
-- [ ] Wire auth forms to Supabase (login, signup, session management)
-- [ ] Auth middleware (protect `/dashboard` and all sub-routes)
-- [ ] Classroom CRUD API routes
-- [ ] Interactive topic intake flow (multi-turn AI conversation)
-- [ ] Classroom list fetched from DB, not hardcoded
+### Step 2: Auth + Classroom CRUD + Intake Flow ✅ — 2026-04-27
+
+**Auth:**
+- `src/middleware.ts` — Route protection middleware (redirects unauthenticated to `/login`, authenticated away from auth pages)
+- `src/lib/supabase/middleware.ts` — Session refresh + redirect logic using `@supabase/ssr`
+- `src/app/actions/auth.ts` — Server Actions: `login`, `signup`, `logout` with Zod validation
+- `src/components/auth/LoginForm.tsx` — Client form using `useActionState`, pending state, error display
+- `src/components/auth/SignupForm.tsx` — Client form with success state (check email message)
+- Login/signup pages updated to use wired components
+
+**Classroom CRUD API:**
+- `GET /api/classrooms` — list user's non-deleted classrooms, ordered by updated_at
+- `POST /api/classrooms` — create classroom with title, topic_summary, personas
+- `GET /api/classrooms/[id]` — fetch single classroom (owner-only)
+- `PATCH /api/classrooms/[id]` — update title, status, topic_summary, persona_definitions
+- `DELETE /api/classrooms/[id]` — soft delete (sets status = 'deleted')
+
+**Interactive Topic Intake (multi-turn AI conversation):**
+- `POST /api/classrooms/intake` — SSE endpoint: streams AI responses token-by-token, 15s keepalive pings, 45s hard timeout
+- AI system prompt guides 4–6 turn conversation to understand topic, level, style, goal
+- AI produces a `{"ready":true, "title":"...", "topic_summary":"..."}` JSON block when ready
+- `src/components/classroom/IntakeChat.tsx` — streaming chat UI: renders tokens as they arrive, parse completion signal, user input with Enter-to-send
+- `src/components/classroom/NewClassroomModal.tsx` — modal wrapping intake chat, creates classroom on AI completion
+
+**Dashboard (live):**
+- `src/app/dashboard/page.tsx` — server component: fetches classrooms from Supabase, passes to client
+- `src/app/dashboard/DashboardClient.tsx` — active/archived filter tabs, CRUD actions, new classroom modal
+- `src/components/classroom/ClassroomCard.tsx` — classroom card with archive/delete menu, status badge
+- `src/app/dashboard/classroom/[id]/page.tsx` — classroom detail page (session placeholder for Phase 2)
+- `src/components/layout/Sidebar.tsx` — updated with sign-out button
+
+**Build status:** `next build` passes, 9 routes, middleware active, zero TypeScript errors.
+
+---
+
+## Phase 1 Complete ✅
+
+All Phase 1 deliverables done:
+- [x] Project scaffold + DB schema migrations
+- [x] Supabase auth (login / signup / session / logout)
+- [x] Auth middleware (dashboard protected, auth routes redirect when logged in)
+- [x] Classroom CRUD (create, list, archive, delete, restore via PATCH status)
+- [x] Interactive topic intake — multi-turn AI conversation with streaming SSE
+- [x] Basic UI shell — sidebar, classroom cards, session view placeholder
+
+---
+
+## Up Next — Phase 2: Session Engine
+- [ ] Session start / stop / resume API
+- [ ] Duration timer with auto-stop
+- [ ] Inactivity detection wired to live session
+- [ ] State persistence — scroll position, last message, full session context saved to DB
+- [ ] Pre-session recap generation from previous session history

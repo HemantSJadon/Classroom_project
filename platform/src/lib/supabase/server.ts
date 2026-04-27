@@ -1,4 +1,4 @@
-import { createServerClient as _createServerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient as _createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@/types/database';
 

@@ -1,4 +1,4 @@
-import { createBrowserClient as _createBrowserClient } from '@supabase/auth-helpers-nextjs';
+import { createBrowserClient as _createBrowserClient } from '@supabase/ssr';
 import type { Database } from '@/types/database';
 
 export function createBrowserClient() {

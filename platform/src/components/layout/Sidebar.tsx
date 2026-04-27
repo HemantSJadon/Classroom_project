@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { logout } from '@/app/actions/auth';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -28,9 +29,14 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-gray-800">
-        <div className="px-3 py-2 text-xs text-gray-500">
-          Classrooms will appear here
-        </div>
+        <form action={logout}>
+          <button
+            type="submit"
+            className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors"
+          >
+            Sign out
+          </button>
+        </form>
       </div>
     </aside>
   );
