@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       await getLLMProvider().stream({
         messages: fullMessages,
         temperature: 0.7,
-        maxTokens: 1024,
+        maxTokens: 500,
         onToken: (token) => send('token', JSON.stringify({ token })),
         onDone: () => {
           send('done', '{}');

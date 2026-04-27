@@ -55,44 +55,17 @@ function parseSSE(
   return acc;
 }
 
+const INITIAL_GREETING = "Hi! I'm your AI Classroom setup assistant. What would you like to learn about?";
+
 export default function IntakeChat({ onComplete, onCancel }: Props) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { role: 'assistant', content: INITIAL_GREETING },
+  ]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const startIntake = useCallback(async () => {
-    setIsStreaming(true);
-    setMessages([{ role: 'assistant', content: '', streaming: true }]);
-    abortRef.current = new AbortController();
-
-    const res = await fetch('/api/classrooms/intake', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: [] }),
-      signal: abortRef.current.signal,
-    });
-
-    const reader = res.body!.getReader();
-    const decoder = new TextDecoder();
-    const currentEvent = { value: '' };
-    let accumulated = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      accumulated = parseSSE(
-        decoder.decode(value, { stream: true }),
-        currentEvent,
-        accumulated,
-        (acc) => setMessages([{ role: 'assistant', content: acc, streaming: true }]),
-        () => { setMessages([{ role: 'assistant', content: accumulated }]); setIsStreaming(false); },
-      );
-    }
-  }, []);
-
-  useEffect(() => { startIntake(); }, [startIntake]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   async function sendMessage() {

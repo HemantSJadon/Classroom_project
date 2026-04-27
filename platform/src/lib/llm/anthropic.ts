@@ -24,7 +24,7 @@ export class AnthropicProvider implements LLMProvider {
     const timer = setTimeout(() => onError(new Error('LLM request timed out')), TIMEOUT_MS);
     try {
       const stream = await this.client.messages.stream({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: maxTokens,
         temperature,
         system,
@@ -46,7 +46,7 @@ export class AnthropicProvider implements LLMProvider {
   async complete({ messages, temperature = 0.7, maxTokens = 2048 }: LLMCompleteOptions): Promise<string> {
     const { system, turns } = toAnthropicMessages(messages);
     const response = await this.client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: maxTokens,
       temperature,
       system,
