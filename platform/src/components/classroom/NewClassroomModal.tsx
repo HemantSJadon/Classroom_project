@@ -39,8 +39,8 @@ export default function NewClassroomModal({ onCreated, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-2xl h-[600px] rounded-2xl border border-gray-700 bg-gray-950 flex flex-col shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-2xl h-[85dvh] sm:h-[600px] rounded-t-2xl sm:rounded-2xl border border-gray-700 bg-gray-950 flex flex-col shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <h2 className="font-semibold text-gray-100">New Classroom</h2>
           <button
